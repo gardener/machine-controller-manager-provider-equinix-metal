@@ -3,7 +3,7 @@
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: MachineDeployment
 metadata:
-  name: test-machine-deployment
+  name: eqx-test-machine-deployment
   namespace: default
 spec:
   #paused: true [uncommment this when you want to pause]
@@ -26,5 +26,5 @@ spec:
     spec:
       class:
         kind: MachineClass # Machine class template used to create machine, could be AWS/GCP/Azure/Other-cloud-providers
-        name: test-mc # Name of the machine class
+        name: eqx-mc # Name of the machine class
         namespace: default
