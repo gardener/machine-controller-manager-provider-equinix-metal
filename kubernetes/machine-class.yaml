@@ -1,0 +1,22 @@
+# Sample Equinix Metal machine class
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineClass
+metadata:
+  name: test-mc
+  namespace: default # Namespace where the controller would watch
+providerSpec:
+  projectID: f40c6787-5ac0-657e-9fe4-62d433c5df11 # UUID of a project with which you have rights
+  OS: alpine_3 # OS ID or slug goes here
+  facility:
+    - ewr1 # Facilities wherein the server can be deployed. Can be one, two or many, or the keyword "any"
+    - ams1
+  machineType: x1.small # Type of packet bare-metal machine
+  tags:
+    Name: sample-machine-name # Name tag that can be used to identify a machine at Packet
+    kubernetes.io/cluster/YOUR_CLUSTER_NAME: "1" # This is mandatory as the safety controller uses this tag to identify VMs created by this controller.
+    kubernetes.io/role/YOUR_ROLE_NAME: "1" # This is mandatory as the safety controller uses this tag to identify VMs created by by this controller.
+    tag1: tag1-value # A set of additional tags attached to a machine (optional)
+    tag2: tag2-value # A set of additional tags attached to a machine (optional)
+secretRef: # If required
+  name: test-secret
+  namespace: default # Namespace where the controller would watch
