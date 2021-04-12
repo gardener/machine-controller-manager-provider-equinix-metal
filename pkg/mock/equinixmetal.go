@@ -14,14 +14,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// PluginSPIImpl is the plugin SPI implementation to mock the provider
 type PluginSPIImpl struct {
 	Devices []packngo.Device
 	index   int
 	mu      sync.Mutex // so that we can increment index without conflicts
 }
 
+// NewSession creates a mock session for provider
 func (p *PluginSPIImpl) NewSession(secret *corev1.Secret) packngo.DeviceService {
-	apiKey := spi.GetApiKey(secret)
+	apiKey := spi.GetAPIKey(secret)
 	token := strings.TrimSpace(apiKey)
 
 	if token != "" {

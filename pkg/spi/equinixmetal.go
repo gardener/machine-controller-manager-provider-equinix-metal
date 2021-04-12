@@ -12,8 +12,9 @@ import (
 type PluginSPIImpl struct {
 }
 
+// NewSession creates a session for equinix metal provider
 func (p *PluginSPIImpl) NewSession(secret *corev1.Secret) packngo.DeviceService {
-	apiKey := GetApiKey(secret)
+	apiKey := GetAPIKey(secret)
 	token := strings.TrimSpace(apiKey)
 
 	if token != "" {
@@ -26,7 +27,8 @@ func (p *PluginSPIImpl) NewSession(secret *corev1.Secret) packngo.DeviceService 
 	return nil
 }
 
-func GetApiKey(secret *corev1.Secret) string {
+// GetAPIKey extracts the APIKey from the *corev1.Secret object
+func GetAPIKey(secret *corev1.Secret) string {
 	return extractCredentialsFromData(secret.Data, api.APIKey)
 }
 

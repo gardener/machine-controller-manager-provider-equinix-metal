@@ -36,8 +36,10 @@ import (
 )
 
 const (
+	// PacketMachineClassKind is the deprecated CRD kind that was used for packet machine classes
 	PacketMachineClassKind = "PacketMachineClass"
-	ProviderEquinixMetal   = "EquinixMetal"
+	// ProviderEquinixMetal is the provider type used to identify EquinixMetal
+	ProviderEquinixMetal = "EquinixMetal"
 )
 
 // NOTE
@@ -161,7 +163,7 @@ func (p *Provider) DeleteMachine(ctx context.Context, req *driver.DeleteMachineR
 	}
 
 	// decodes the provider spec, and validates the spec and the secret for required fields.
-	if err := validateSecretApiKey(req.Secret); err != nil {
+	if err := validateSecretAPIKey(req.Secret); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -184,7 +186,7 @@ func (p *Provider) DeleteMachine(ctx context.Context, req *driver.DeleteMachineR
 	return &driver.DeleteMachineResponse{}, nil
 }
 
-// us handles a machine get status request
+// GetMachineStatus handles a machine get status request
 // OPTIONAL METHOD
 //
 // REQUEST PARAMETERS (driver.GetMachineStatusRequest)
@@ -214,7 +216,7 @@ func (p *Provider) GetMachineStatus(ctx context.Context, req *driver.GetMachineS
 		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderEquinixMetal))
 	}
 
-	if err := validateSecretApiKey(req.Secret); err != nil {
+	if err := validateSecretAPIKey(req.Secret); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -267,7 +269,7 @@ func (p *Provider) ListMachines(ctx context.Context, req *driver.ListMachinesReq
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	if err := validateSecretApiKey(req.Secret); err != nil {
+	if err := validateSecretAPIKey(req.Secret); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -396,8 +398,8 @@ func decodeProviderSpec(machineClass *v1alpha1.MachineClass) (*api.EquinixMetalP
 	return providerSpec, nil
 }
 
-func validateSecretApiKey(secret *corev1.Secret) error {
-	return validateSecret(secret, validation.SecretFieldApiKey)
+func validateSecretAPIKey(secret *corev1.Secret) error {
+	return validateSecret(secret, validation.SecretFieldAPIKey)
 }
 func validateSecret(secret *corev1.Secret, fields ...string) error {
 	validationErr := validation.ValidateSecret(secret, fields...)
