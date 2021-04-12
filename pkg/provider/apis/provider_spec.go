@@ -14,8 +14,10 @@ limitations under the License.
 package api
 
 const (
-	// APIKey is a constant for a key name that is part of the Packet cloud credentials
-	APIKey          string = "apiToken"
+	// APIKey is a constant for a key name that is part of the equinix metal cloud credentials
+	APIKey string = "apiToken"
+	// AlternateAPIKey is an alternate constant for a key name that is part of the equinix metal cloud credentials.
+	// It is used as an alternative when APIKey isn't found.
 	AlternateAPIKey string = "alternateApiToken"
 	// V1alpha1 is the API version
 	V1alpha1 string = "mcm.gardener.cloud/v1alpha1"

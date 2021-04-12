@@ -29,15 +29,17 @@ import (
 )
 
 const (
-	nameFmt             string = `[-a-z0-9]+`
-	nameMaxLength       int    = 63
-	SecretFieldApiKey          = "apiToken"
-	SecretFieldUserData        = "userData"
+	nameFmt       string = `[-a-z0-9]+`
+	nameMaxLength int    = 63
+	// SecretFieldAPIKey is the field name containing the API token
+	SecretFieldAPIKey = "apiToken"
+	// SecretFieldUserData is the field name containing the userData for the VM
+	SecretFieldUserData = "userData"
 )
 
 var (
 	nameRegexp          = regexp.MustCompile("^" + nameFmt + "$")
-	secretFieldDefaults = []string{SecretFieldApiKey, SecretFieldUserData}
+	secretFieldDefaults = []string{SecretFieldAPIKey, SecretFieldUserData}
 )
 
 // ValidateProviderSpec validates provider spec to check if all fields are present and valid
@@ -121,7 +123,7 @@ func ValidateSecret(secret *corev1.Secret, fields ...string) field.ErrorList {
 		allErrs = append(allErrs, field.Required(fldPath.Child(""), "secretRef is required"))
 	} else {
 		for _, fieldName := range matchFields {
-			if fieldName == SecretFieldApiKey && "" == string(secret.Data[api.APIKey]) && "" == string(secret.Data[api.AlternateAPIKey]) {
+			if fieldName == SecretFieldAPIKey && "" == string(secret.Data[api.APIKey]) && "" == string(secret.Data[api.AlternateAPIKey]) {
 				allErrs = append(allErrs, field.Required(fldPath.Child(api.APIKey), fmt.Sprintf("Required Equinix Metal API Key one of '%s' or '%s'", api.APIKey, api.AlternateAPIKey)))
 			}
 			if fieldName == SecretFieldUserData && "" == string(secret.Data["userData"]) {
