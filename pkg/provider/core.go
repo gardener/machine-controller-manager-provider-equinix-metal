@@ -20,6 +20,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -122,17 +123,18 @@ func (p *Provider) CreateMachine(ctx context.Context, req *driver.CreateMachineR
 		Plan:           providerSpec.MachineType,
 		ProjectID:      providerSpec.ProjectID,
 		BillingCycle:   providerSpec.BillingCycle,
+		Metro:          providerSpec.Metro,
 		Facility:       providerSpec.Facility,
 		OS:             providerSpec.OS,
 		ProjectSSHKeys: providerSpec.SSHKeys,
 		Tags:           providerSpec.Tags,
 	}
-
-	device, _, err := svc.Create(createRequest)
+	device, err := createDeviceWithReservations(svc, createRequest, providerSpec.ReservationID, providerSpec.ReservedOnly)
 	if err != nil {
 		klog.Errorf("Could not create machine: %v", err)
 		return nil, status.Error(codes.Unavailable, fmt.Sprintf("Could not create machine: %v", err))
 	}
+
 	response := &driver.CreateMachineResponse{
 		ProviderID: encodeMachineID(device),
 		NodeName:   machine.Name,
@@ -396,6 +398,32 @@ func decodeProviderSpec(machineClass *v1alpha1.MachineClass) (*api.EquinixMetalP
 	}
 
 	return providerSpec, nil
+}
+
+func createDeviceWithReservations(svc packngo.DeviceService, createRequest *packngo.DeviceCreateRequest, reservationIDs []string, reservedOnly bool) (device *packngo.Device, err error) {
+	// if there were no reservation IDs and I didn't ask for reservedOnly, then just create one on-demand and return
+	if len(reservationIDs) == 0 && !reservedOnly {
+		device, _, err = svc.Create(createRequest)
+		return device, err
+	}
+
+	// if we got here, we either had some reservation IDs, or we were asked to do reserved only.
+	// In both cases, we try reservations first.
+	for _, resID := range reservationIDs {
+		createRequest.HardwareReservationID = resID
+		device, _, err = svc.Create(createRequest)
+		// if no error, we got the device, return it
+		if err == nil {
+			return device, err
+		}
+	}
+	// if we got here, we failed to get a device with the given hardware reservation
+	if reservedOnly {
+		return nil, errors.New("could not get a device with the provided reservation IDs, and reservedOnly is true")
+	}
+	// now just create a device on demand
+	device, _, err = svc.Create(createRequest)
+	return device, err
 }
 
 func validateSecretAPIKey(secret *corev1.Secret) error {
