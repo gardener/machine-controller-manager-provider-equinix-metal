@@ -29,7 +29,8 @@ const (
 var _ = Describe("MachineServer", func() {
 	// Some initializations
 	providerSpecStruct := api.EquinixMetalProviderSpec{
-		Facility:     []string{"ewr1", "ny5"},
+		Facilities:   []string{"ewr1", "ny5"},
+		Metro:        "ny",
 		MachineType:  "c3.small.x86",
 		BillingCycle: "hourly",
 		OS:           "alpine_3.13",

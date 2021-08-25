@@ -58,8 +58,8 @@ func ValidateProviderSpec(spec *api.EquinixMetalProviderSpec, fldPath *field.Pat
 	if "" == spec.ProjectID {
 		allErrs = append(allErrs, field.Required(fldPath.Child("projectID"), "Project ID is required"))
 	}
-	if len(spec.Facility) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("facility"), "At least one Facility specification is required"))
+	if "" == spec.Metro {
+		allErrs = append(allErrs, field.Required(fldPath.Child("metro"), "Metro is required"))
 	}
 
 	allErrs = append(allErrs, validateTags(spec.Tags, field.NewPath("spec.tags"))...)

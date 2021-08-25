@@ -124,12 +124,12 @@ func (p *Provider) CreateMachine(ctx context.Context, req *driver.CreateMachineR
 		ProjectID:      providerSpec.ProjectID,
 		BillingCycle:   providerSpec.BillingCycle,
 		Metro:          providerSpec.Metro,
-		Facility:       providerSpec.Facility,
+		Facility:       providerSpec.Facilities,
 		OS:             providerSpec.OS,
 		ProjectSSHKeys: providerSpec.SSHKeys,
 		Tags:           providerSpec.Tags,
 	}
-	device, err := createDeviceWithReservations(svc, createRequest, providerSpec.ReservationID, providerSpec.ReservedOnly)
+	device, err := createDeviceWithReservations(svc, createRequest, providerSpec.ReservationIDs, providerSpec.ReservedOnly)
 	if err != nil {
 		klog.Errorf("Could not create machine: %v", err)
 		return nil, status.Error(codes.Unavailable, fmt.Sprintf("Could not create machine: %v", err))
