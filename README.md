@@ -81,15 +81,17 @@ Process:
         ```bash
         kubectl apply -f kubernetes/machine-class.yaml
         ```
-   1. Fill in the Kubernetes `Secret` with the Equinix Metal API key and deploy:
+   1. Copy the kubernetes `Secret` template to the temporary directory, then fill it in with your Equinix Metal API key and deploy:
+       ```bash
+      cp kubernetes/secret.yaml tmp/secret.yaml
+      vi tmp/secret.yaml  # fill in your actual key here
+      kubectl apply -f tmp/secret.yaml
+       ```
+   1. Deploy various `Machine` objects and make sure they are created and have the userData you supplied.
         ```bash
-        kubectl apply -f kubernetes/secret.yaml
+        kubectl apply -f kubernetes/machines/
         ```
-   1. Deploy a `Machine` object and make sure it is created and has the userData you supplied.
-        ```bash
-        kubectl apply -f kubernetes/machine.yaml
-        ```
-   1. Once the `Machine` has passed testing, deploy a `MachineDeployment` and make sure it is created and has the userData you supplied. If you provided it with an actual joinable target cluster and userData to join it, wait until all of the machines join that cluster successfully:
+   1. Once the `Machine`s have passed testing, deploy a `MachineDeployment` and make sure it is created and has the userData you supplied. If you provided it with an actual joinable target cluster and userData to join it, wait until all of the machines join that cluster successfully:
         ```bash
         kubectl apply -f kubernetes/machine-deployment.yaml
         ```

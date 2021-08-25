@@ -8,10 +8,8 @@ provider: EquinixMetal
 providerSpec:
   projectID: e3db5484-f789-43e1-8aea-a1921cae50dd # UUID of a project with which you have rights
   OS: alpine_3 # OS ID or slug goes here
-  facility:
-    - ewr1 # Facilities wherein the server can be deployed. Can be one, two or many, or the keyword "any"
-    - ams1
-  machineType: x1.small # Type of packet bare-metal machine
+  metro: ny
+  machineType: t1.small.x86 # Type of packet bare-metal machine
   billingCycle: hourly  # billing cycle
   tags:
     - "Name: sample-machine-name" # Name tag that can be used to identify a machine at Packet
@@ -19,6 +17,62 @@ providerSpec:
     - "kubernetes.io/role/YOUR_ROLE_NAME: 1" # This is mandatory as the safety controller uses this tag to identify machines created by by this controller.
     - "tag1: tag1-value" # A set of additional tags attached to a machine (optional)
     - "tag2: tag2-value" # A set of additional tags attached to a machine (optional)
+secretRef: # If required
+  name: test-secret
+  namespace: default # Namespace where the controller would watch
+---
+# Sample Equinix Metal machine class
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineClass
+metadata:
+  name: eqx-mc-ny-facilities
+  namespace: default # Namespace where the controller would watch
+provider: EquinixMetal
+providerSpec:
+  projectID: e3db5484-f789-43e1-8aea-a1921cae50dd # UUID of a project with which you have rights
+  OS: alpine_3 # OS ID or slug goes here
+  metro: ny # Metro wherein the server can be deployed, can be one or "any"
+  facilities:
+    - ewr1 # Facilities wherein the server can be deployed. Can be zero, one, two or many. MUST be in the metro above
+    - ny5
+  machineType: t1.small.x86 # Type of packet bare-metal machine
+  billingCycle: hourly  # billing cycle
+  tags:
+    - "Name: sample-machine-name" # Name tag that can be used to identify a machine at Packet
+    - "kubernetes.io/cluster/YOUR_CLUSTER_NAME: 1" # This is mandatory as the safety controller uses this tag to identify machines created by this controller.
+    - "kubernetes.io/role/YOUR_ROLE_NAME: 1" # This is mandatory as the safety controller uses this tag to identify machines created by by this controller.
+    - "tag1: tag1-value" # A set of additional tags attached to a machine (optional)
+    - "tag2: tag2-value" # A set of additional tags attached to a machine (optional)
+secretRef: # If required
+  name: test-secret
+  namespace: default # Namespace where the controller would watch
+---
+# Sample Equinix Metal machine class
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineClass
+metadata:
+  name: eqx-mc-ny-reserved
+  namespace: default # Namespace where the controller would watch
+provider: EquinixMetal
+providerSpec:
+  projectID: e3db5484-f789-43e1-8aea-a1921cae50dd # UUID of a project with which you have rights
+  OS: alpine_3 # OS ID or slug goes here
+  metro: ny
+  facilities:
+    - ewr1 # Facilities wherein the server can be deployed. Can be zero, one, two or many. MUST be in the metro above
+    - ny5
+  machineType: t1.small.x86 # Type of packet bare-metal machine
+  billingCycle: hourly  # billing cycle
+  tags:
+    - "Name: sample-machine-name" # Name tag that can be used to identify a machine at Packet
+    - "kubernetes.io/cluster/YOUR_CLUSTER_NAME: 1" # This is mandatory as the safety controller uses this tag to identify machines created by this controller.
+    - "kubernetes.io/role/YOUR_ROLE_NAME: 1" # This is mandatory as the safety controller uses this tag to identify machines created by by this controller.
+    - "tag1: tag1-value" # A set of additional tags attached to a machine (optional)
+    - "tag2: tag2-value" # A set of additional tags attached to a machine (optional)
+  reservationIDs:
+    - 932eecda-6808-44b9-a3be-3abef49796ef
+    - 558c4d16-3523-4456-9c3a-73722920a7bb
+  reservedDevicesOnly: true
 secretRef: # If required
   name: test-secret
   namespace: default # Namespace where the controller would watch

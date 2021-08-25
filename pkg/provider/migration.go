@@ -24,8 +24,8 @@ func fillUpMachineClass(packetMachineClass *v1alpha1.PacketMachineClass, machine
 	}
 
 	// make sure to copy slices
-	providerSpec.Facility = make([]string, len(packetMachineClass.Spec.Facility))
-	copy(providerSpec.Facility, packetMachineClass.Spec.Facility)
+	providerSpec.Facilities = make([]string, len(packetMachineClass.Spec.Facility))
+	copy(providerSpec.Facilities, packetMachineClass.Spec.Facility)
 	providerSpec.Tags = make([]string, len(packetMachineClass.Spec.Tags))
 	copy(providerSpec.Tags, packetMachineClass.Spec.Tags)
 	providerSpec.SSHKeys = make([]string, len(packetMachineClass.Spec.SSHKeys))
