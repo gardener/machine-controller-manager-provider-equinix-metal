@@ -8,14 +8,11 @@ import (
 	"github.com/gardener/machine-controller-manager-provider-equinix-metal/pkg/mock"
 	"github.com/gardener/machine-controller-manager-provider-equinix-metal/pkg/provider"
 	api "github.com/gardener/machine-controller-manager-provider-equinix-metal/pkg/provider/apis"
-	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 const (
@@ -495,120 +492,4 @@ var _ = Describe("MachineServer", func() {
 			}),
 		)
 	})
-	Describe("#GenerateMachineClassForMigration", func() {
-		type setup struct {
-		}
-		type action struct {
-			generateMachineClassForMigrationRequest *driver.GenerateMachineClassForMigrationRequest
-		}
-		type expect struct {
-			machineClass *v1alpha1.MachineClass
-		}
-		type data struct {
-			setup  setup
-			action action
-			expect expect
-		}
-		/*
-			SSHKeys      []string `json:"sshKeys,omitempty"`
-			UserData     string   `json:"userdata,omitempty"`
-		*/
-		validRaw := `{"apiVersion":"mcm.gardener.cloud/v1alpha1","facility":["ewr1"],"machineType":"c3.medium.x86","billingCycle":"hourly","OS":"ubuntu_2004","projectID":"abcdefg","tags":["key1: value1","key2: value2"],"userdata":"dummy-user-data"}`
-		DescribeTable("##table",
-			func(data *data) {
-				plugin := &mock.PluginSPIImpl{}
-				p := provider.NewProvider(plugin)
-				ctx := context.Background()
-
-				_, _ = p.GenerateMachineClassForMigration(
-					ctx,
-					data.action.generateMachineClassForMigrationRequest,
-				)
-
-				fmt.Println(string(data.action.generateMachineClassForMigrationRequest.MachineClass.ProviderSpec.Raw))
-				fmt.Println(string(data.expect.machineClass.ProviderSpec.Raw))
-				Expect(data.action.generateMachineClassForMigrationRequest.MachineClass).To(Equal(data.expect.machineClass))
-			},
-			Entry("Simple migration request with all fields set", &data{
-				action: action{
-					generateMachineClassForMigrationRequest: &driver.GenerateMachineClassForMigrationRequest{
-						ProviderSpecificMachineClass: &v1alpha1.PacketMachineClass{
-							ObjectMeta: v1.ObjectMeta{
-								Name: "test-mc",
-								Labels: map[string]string{
-									"key1": "value1",
-									"key2": "value2",
-								},
-								Annotations: map[string]string{
-									"key1": "value1",
-									"key2": "value2",
-								},
-								Finalizers: []string{
-									"mcm/finalizer",
-								},
-							},
-							TypeMeta: v1.TypeMeta{},
-							Spec: v1alpha1.PacketMachineClassSpec{
-								Facility:     []string{"ewr1"},
-								MachineType:  "c3.medium.x86",
-								BillingCycle: "hourly",
-								OS:           "ubuntu_2004",
-								ProjectID:    "abcdefg",
-								UserData:     "dummy-user-data",
-								Tags: []string{
-									"key1: value1",
-									"key2: value2",
-								},
-								SecretRef: &corev1.SecretReference{
-									Name:      "test-secret",
-									Namespace: "test-namespace",
-								},
-								CredentialsSecretRef: &corev1.SecretReference{
-									Name:      "test-credentials",
-									Namespace: "test-namespace",
-								},
-							},
-						},
-						MachineClass: &v1alpha1.MachineClass{},
-						ClassSpec: &v1alpha1.ClassSpec{
-							Kind: provider.PacketMachineClassKind,
-							Name: "test-mc",
-						},
-					},
-				},
-				expect: expect{
-					machineClass: &v1alpha1.MachineClass{
-						TypeMeta: v1.TypeMeta{},
-						ObjectMeta: v1.ObjectMeta{
-							Name: "test-mc",
-							Labels: map[string]string{
-								"key1": "value1",
-								"key2": "value2",
-							},
-							Annotations: map[string]string{
-								"key1": "value1",
-								"key2": "value2",
-							},
-							Finalizers: []string{
-								"mcm/finalizer",
-							},
-						},
-						ProviderSpec: runtime.RawExtension{
-							Raw: []byte(validRaw),
-						},
-						SecretRef: &corev1.SecretReference{
-							Name:      "test-secret",
-							Namespace: "test-namespace",
-						},
-						CredentialsSecretRef: &corev1.SecretReference{
-							Name:      "test-credentials",
-							Namespace: "test-namespace",
-						},
-						Provider: provider.ProviderEquinixMetal,
-					},
-				},
-			}),
-		)
-	})
-
 })

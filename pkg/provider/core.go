@@ -353,18 +353,13 @@ func (p *Provider) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsReq
 func (p *Provider) GenerateMachineClassForMigration(ctx context.Context, req *driver.GenerateMachineClassForMigrationRequest) (*driver.GenerateMachineClassForMigrationResponse, error) {
 	// Log messages to track start and end of request
 	klog.V(2).Infof("MigrateMachineClass request has been received for %q", req.ClassSpec)
-	defer klog.V(2).Infof("MigrateMachineClass request has been processed successfully for %q", req.ClassSpec)
 
 	// this is the old PacketMachineClass; in the move to out-of-tree, we migrated to the newer Equinix Metal
-	packetMachineClass := req.ProviderSpecificMachineClass.(*v1alpha1.PacketMachineClass)
+	// but the old one had just Facility, the newer requires Metro; we will not attempt to divine the metro from
+	// the facility. This cut simply is not backwards-compatible.
 
-	// Check if incoming CR is valid CR for migration
-	// In this case, the MachineClassKind to be matching
-	if req.ClassSpec.Kind != PacketMachineClassKind {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderEquinixMetal))
-	}
-
-	return &driver.GenerateMachineClassForMigrationResponse{}, fillUpMachineClass(packetMachineClass, req.MachineClass)
+	klog.V(2).Info("MigrateMachineClass does not support backwards compatibility")
+	return nil, status.Error(codes.InvalidArgument, "Migration not supported")
 }
 
 //  create a session
