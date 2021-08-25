@@ -32,7 +32,7 @@ providerSpec:
   projectID: e3db5484-f789-43e1-8aea-a1921cae50dd # UUID of a project with which you have rights
   OS: alpine_3 # OS ID or slug goes here
   metro: ny # Metro wherein the server can be deployed, can be one or "any"
-  facility:
+  facilities:
     - ewr1 # Facilities wherein the server can be deployed. Can be zero, one, two or many. MUST be in the metro above
     - ny5
   machineType: x1.small # Type of packet bare-metal machine
@@ -58,7 +58,7 @@ providerSpec:
   projectID: e3db5484-f789-43e1-8aea-a1921cae50dd # UUID of a project with which you have rights
   OS: alpine_3 # OS ID or slug goes here
   metro: ny
-  facility:
+  facilities:
     - ewr1 # Facilities wherein the server can be deployed. Can be zero, one, two or many. MUST be in the metro above
     - ny5
   machineType: x1.small # Type of packet bare-metal machine
