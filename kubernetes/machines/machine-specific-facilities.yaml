@@ -1,7 +1,7 @@
 apiVersion: machine.sapcloud.io/v1alpha1
 kind: Machine
 metadata:
-  name: eqx-test-machine
+  name: eqx-test-machine-facility
   namespace: default
 spec:
   class:
