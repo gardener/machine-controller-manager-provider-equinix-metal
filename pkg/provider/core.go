@@ -129,6 +129,7 @@ func (p *Provider) CreateMachine(ctx context.Context, req *driver.CreateMachineR
 		ProjectSSHKeys: providerSpec.SSHKeys,
 		Tags:           providerSpec.Tags,
 	}
+	klog.V(3).Infof("will create machine with request %#v, reservation IDs %v, reservedOnly %v", createRequest, providerSpec.ReservationIDs, providerSpec.ReservedOnly)
 	device, err := createDeviceWithReservations(svc, createRequest, providerSpec.ReservationIDs, providerSpec.ReservedOnly)
 	if err != nil {
 		klog.Errorf("Could not create machine: %v", err)

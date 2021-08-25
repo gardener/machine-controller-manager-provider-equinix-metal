@@ -7,4 +7,3 @@ spec:
   class:
     kind: MachineClass
     name: eqx-mc
-    namespace: default
