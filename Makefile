@@ -18,9 +18,9 @@ IMAGE_REPOSITORY    := <link-to-image-repo>
 IMAGE_TAG           := $(shell cat VERSION)
 PROVIDER_NAME       := SampleProvider
 PROJECT_NAME        := gardener
-CONTROL_NAMESPACE  := default
+CONTROL_NAMESPACE := default
 CONTROL_KUBECONFIG := dev/target-kubeconfig.yaml
-TARGET_KUBECONFIG  := dev/target-kubeconfig.yaml
+TARGET_KUBECONFIG := dev/target-kubeconfig.yaml
 
 #########################################
 # Rules for running helper scripts
