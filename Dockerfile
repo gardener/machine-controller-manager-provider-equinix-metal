@@ -1,5 +1,5 @@
 #############      builder                                  #############
-FROM golang:1.13.5 AS builder
+FROM golang:1.17.9 AS builder
 
 WORKDIR /go/src/github.com/gardener/machine-controller-manager-provider-equinix-metal
 COPY . .
@@ -7,7 +7,7 @@ COPY . .
 RUN .ci/build
 
 #############      base                                     #############
-FROM alpine:3.11.2 as base
+FROM alpine:3.15.4 as base
 
 RUN apk add --update bash curl tzdata
 WORKDIR /

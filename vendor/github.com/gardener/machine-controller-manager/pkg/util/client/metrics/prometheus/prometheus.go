@@ -24,6 +24,7 @@ Modifications Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights 
 package prometheus
 
 import (
+	"context"
 	"net/url"
 	"time"
 
@@ -56,14 +57,18 @@ var (
 func init() {
 	prometheus.MustRegister(requestLatency)
 	prometheus.MustRegister(requestResult)
-	metrics.Register(&latencyAdapter{requestLatency}, &resultAdapter{requestResult})
+	opts := metrics.RegisterOpts{
+		RequestLatency: &latencyAdapter{requestLatency},
+		RequestResult:  &resultAdapter{requestResult},
+	}
+	metrics.Register(opts)
 }
 
 type latencyAdapter struct {
 	m *prometheus.HistogramVec
 }
 
-func (l *latencyAdapter) Observe(verb string, u url.URL, latency time.Duration) {
+func (l *latencyAdapter) Observe(_ context.Context, verb string, u url.URL, latency time.Duration) {
 	l.m.WithLabelValues(verb, u.String()).Observe(latency.Seconds())
 }
 
@@ -71,6 +76,6 @@ type resultAdapter struct {
 	m *prometheus.CounterVec
 }
 
-func (r *resultAdapter) Increment(code, method, host string) {
+func (r *resultAdapter) Increment(_ context.Context, code, method, host string) {
 	r.m.WithLabelValues(code, method, host).Inc()
 }
