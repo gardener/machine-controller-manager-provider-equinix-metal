@@ -44,7 +44,7 @@ import (
 	"github.com/gardener/machine-controller-manager/pkg/util/configz"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/app/options"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
-	"github.com/prometheus/client_golang/prometheus"
+	prometheus "github.com/prometheus/client_golang/prometheus/promhttp"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -58,7 +58,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -262,6 +262,7 @@ func StartControllers(s *options.MCServer,
 			controlCoreInformerFactory.Core().V1().Secrets(),
 			targetCoreInformerFactory.Core().V1().Nodes(),
 			targetCoreInformerFactory.Policy().V1beta1().PodDisruptionBudgets(),
+			targetCoreInformerFactory.Storage().V1().VolumeAttachments(),
 			machineSharedInformers.MachineClasses(),
 			machineSharedInformers.Machines(),
 			recorder,
@@ -305,7 +306,7 @@ func getAvailableResources(clientBuilder coreclientbuilder.ClientBuilder) (map[s
 		}
 
 		healthStatus := 0
-		resp := client.Discovery().RESTClient().Get().AbsPath("/healthz").Do().StatusCode(&healthStatus)
+		resp := client.Discovery().RESTClient().Get().AbsPath("/healthz").Do(context.Background()).StatusCode(&healthStatus)
 		if healthStatus != http.StatusOK {
 			klog.Errorf("Server isn't healthy yet.  Waiting a little while.")
 			return false, nil
@@ -357,6 +358,12 @@ func startHTTP(s *options.MCServer) {
 		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
 		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+		mux.HandleFunc("/debug/pprof/goroutine", pprof.Handler("goroutine").ServeHTTP)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/heap", pprof.Handler("heap").ServeHTTP)
+		mux.HandleFunc("/debug/pprof/threadcreate", pprof.Handler("threadcreate").ServeHTTP)
+		mux.HandleFunc("/debug/pprof/block", pprof.Handler("block").ServeHTTP)
+		mux.HandleFunc("/debug/pprof/mutex", pprof.Handler("mutex").ServeHTTP)
 		if s.EnableContentionProfiling {
 			goruntime.SetBlockProfileRate(1)
 		}
