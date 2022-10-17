@@ -3,7 +3,7 @@ module github.com/gardener/machine-controller-manager-provider-equinix-metal
 go 1.17
 
 require (
-	github.com/gardener/machine-controller-manager v0.45.0
+	github.com/gardener/machine-controller-manager v0.47.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.11.0
 	github.com/packethost/packngo v0.9.0
@@ -16,6 +16,7 @@ require (
 )
 
 require (
+	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
