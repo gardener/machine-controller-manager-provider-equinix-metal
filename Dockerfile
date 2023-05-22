@@ -1,5 +1,5 @@
 #############      builder                                  #############
-FROM golang:1.17.9 AS builder
+FROM golang:1.20.4 AS builder
 
 WORKDIR /go/src/github.com/gardener/machine-controller-manager-provider-equinix-metal
 COPY . .
