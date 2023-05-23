@@ -1,9 +1,9 @@
 module github.com/gardener/machine-controller-manager-provider-equinix-metal
 
-go 1.17
+go 1.20
 
 require (
-	github.com/gardener/machine-controller-manager v0.49.0
+	github.com/gardener/machine-controller-manager v0.49.1
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.23.0
 	github.com/packethost/packngo v0.9.0
