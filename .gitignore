@@ -1,1 +1,16 @@
-tmp/
+/args
+/bin
+/.kube-secrets
+/tmp/*
+/dev
+/logs
+
+.vscode
+.idea
+*.DS_Store
+*amd64
+*.html
+main
+
+# Output of the go coverage tool
+*coverprofile.out*
