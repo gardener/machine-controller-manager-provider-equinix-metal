@@ -58,9 +58,9 @@ func newMachine(
 		machine.Spec = v1alpha1.MachineSpec{
 			ProviderID: fmt.Sprintf("equinixmetal://ewr1/%06d", setMachineIndex),
 		}
-		machine.Status = v1alpha1.MachineStatus{
-			Node: fmt.Sprintf("machine-%d", setMachineIndex),
-		}
+
+		machine.Labels=make(map[string]string)
+		machine.Labels["node"]=fmt.Sprintf("machine-%d",setMachineIndex)
 	}
 
 	return machine
