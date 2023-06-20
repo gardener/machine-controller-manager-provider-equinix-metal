@@ -126,6 +126,7 @@ func (p *Provider) CreateMachine(ctx context.Context, req *driver.CreateMachineR
 		Metro:          providerSpec.Metro,
 		Facility:       providerSpec.Facilities,
 		OS:             providerSpec.OS,
+		IPXEScriptURL:  providerSpec.IPXEScriptURL,
 		ProjectSSHKeys: providerSpec.SSHKeys,
 		Tags:           providerSpec.Tags,
 	}

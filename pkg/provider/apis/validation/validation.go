@@ -49,8 +49,8 @@ func ValidateProviderSpec(spec *api.EquinixMetalProviderSpec, fldPath *field.Pat
 		allErrs = field.ErrorList{}
 	)
 
-	if "" == spec.OS {
-		allErrs = append(allErrs, field.Required(fldPath.Child("os"), "OS is required"))
+	if "" == spec.OS && "" == spec.IPXEScriptURL {
+		allErrs = append(allErrs, field.Required(fldPath.Child("os"), "OS or IPXEScriptURL is required"))
 	}
 	if "" == spec.MachineType {
 		allErrs = append(allErrs, field.Required(fldPath.Child("machineType"), "Machine Type is required"))

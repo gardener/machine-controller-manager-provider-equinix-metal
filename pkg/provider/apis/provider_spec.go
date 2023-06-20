@@ -31,6 +31,7 @@ type EquinixMetalProviderSpec struct {
 	MachineType    string   `json:"machineType"`
 	BillingCycle   string   `json:"billingCycle"`
 	OS             string   `json:"OS"`
+	IPXEScriptURL  string   `json:"ipxeScriptUrl,omitempty"`
 	ProjectID      string   `json:"projectID"`
 	Tags           []string `json:"tags,omitempty"`
 	SSHKeys        []string `json:"sshKeys,omitempty"`
