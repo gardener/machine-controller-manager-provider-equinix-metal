@@ -18,10 +18,12 @@ limitations under the License.
 package provider
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"strings"
 
 	api "github.com/gardener/machine-controller-manager-provider-equinix-metal/pkg/provider/apis"
@@ -369,6 +371,7 @@ func decodeProviderSpec(machineClass *v1alpha1.MachineClass) (*api.EquinixMetalP
 func createDeviceWithReservations(svc packngo.DeviceService, createRequest *packngo.DeviceCreateRequest, reservationIDs []string, reservedOnly bool) (device *packngo.Device, err error) {
 	// if there were no reservation IDs and I didn't ask for reservedOnly, then just create one on-demand and return
 	if len(reservationIDs) == 0 && !reservedOnly {
+		klog.V(2).Info("No reservation ids provided, creating a on demand instance")
 		device, _, err = svc.Create(createRequest)
 		return device, err
 	}
@@ -377,11 +380,17 @@ func createDeviceWithReservations(svc packngo.DeviceService, createRequest *pack
 	// In both cases, we try reservations first.
 	for _, resID := range reservationIDs {
 		createRequest.HardwareReservationID = resID
-		device, _, err = svc.Create(createRequest)
+		var res *packngo.Response
+		device, res, err = svc.Create(createRequest)
 		// if no error, we got the device, return it
 		if err == nil {
 			return device, err
 		}
+		body := bytes.NewBuffer([]byte{})
+		if _, err := ioutil.ReadAll(res.Request.Body); err != nil {
+			klog.Error(err)
+		}
+		klog.Errorf("Error while creating machine with reservation id %s: Request: %s Error: %v", resID, body.String(), err)
 	}
 	// if we got here, we failed to get a device with the given hardware reservation
 	if reservedOnly {
