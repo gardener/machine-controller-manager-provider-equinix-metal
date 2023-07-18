@@ -364,6 +364,9 @@ func decodeProviderSpec(machineClass *v1alpha1.MachineClass) (*api.EquinixMetalP
 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	if providerSpec.IPXEScriptURL != "" {
+		providerSpec.OS = "custom_ipxe"
+	}
 
 	return providerSpec, nil
 }
