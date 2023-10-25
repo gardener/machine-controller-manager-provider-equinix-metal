@@ -19,7 +19,7 @@ IMAGE_TAG           := $(shell cat VERSION)
 PROVIDER_NAME       := SampleProvider
 PROJECT_NAME        := gardener
 
-include .env
+-include .env
 
 #########################################
 # Rules for running helper scripts
