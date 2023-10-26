@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+-include .env
+
 BINARY_PATH         := bin/
 COVERPROFILE        := test/output/coverprofile.out
 IMAGE_REPOSITORY    := <link-to-image-repo>
 IMAGE_TAG           := $(shell cat VERSION)
 PROVIDER_NAME       := SampleProvider
 PROJECT_NAME        := gardener
-
--include .env
 
 #########################################
 # Rules for running helper scripts
