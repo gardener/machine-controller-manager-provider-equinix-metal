@@ -27,11 +27,10 @@ const (
 type EquinixMetalProviderSpec struct {
 	APIVersion     string   `json:"apiVersion,omitempty"`
 	Metro          string   `json:"metro,omitempty"`
-	Facilities     []string `json:"facilities"`
 	MachineType    string   `json:"machineType"`
 	BillingCycle   string   `json:"billingCycle"`
 	OS             string   `json:"OS,omitempty"`
-	IPXEScriptURL  string   `json:"ipxeScriptUrl,omitempty"`
+	IPXEScriptURL  *string  `json:"ipxeScriptUrl,omitempty"`
 	ProjectID      string   `json:"projectID"`
 	Tags           []string `json:"tags,omitempty"`
 	SSHKeys        []string `json:"sshKeys,omitempty"`

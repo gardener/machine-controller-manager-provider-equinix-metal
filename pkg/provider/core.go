@@ -23,16 +23,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
+	"net/http"
 	"strings"
 
+	"github.com/equinix/equinix-sdk-go/services/metalv1"
 	api "github.com/gardener/machine-controller-manager-provider-equinix-metal/pkg/provider/apis"
 	validation "github.com/gardener/machine-controller-manager-provider-equinix-metal/pkg/provider/apis/validation"
+	"github.com/gardener/machine-controller-manager-provider-equinix-metal/pkg/spi"
 	"github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/driver"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
 	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
-	"github.com/packethost/packngo"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/klog/v2"
@@ -64,24 +66,28 @@ const (
 //
 // RESPONSE PARAMETERS (driver.CreateMachineResponse)
 // ProviderID            string                   Unique identification of the VM at the cloud provider. This could be the same/different from req.MachineName.
-//                                                ProviderID typically matches with the node.Spec.ProviderID on the node object.
-//                                                Eg: gce://project-name/region/vm-ProviderID
+//
+//	ProviderID typically matches with the node.Spec.ProviderID on the node object.
+//	Eg: gce://project-name/region/vm-ProviderID
+//
 // NodeName              string                   Returns the name of the node-object that the VM register's with Kubernetes.
-//                                                This could be different from req.MachineName as well
+//
+//	This could be different from req.MachineName as well
+//
 // LastKnownState        string                   (Optional) Last known state of VM during the current operation.
-//                                                Could be helpful to continue operations in future requests.
+//
+//	Could be helpful to continue operations in future requests.
 //
 // OPTIONAL IMPLEMENTATION LOGIC
 // It is optionally expected by the safety controller to use an identification mechanisms to map the VM Created by a providerSpec.
 // These could be done using tag(s)/resource-groups etc.
 // This logic is used by safety controller to delete orphan VMs which are not backed by any machine CRD
-//
 func (p *Provider) CreateMachine(ctx context.Context, req *driver.CreateMachineRequest) (*driver.CreateMachineResponse, error) {
 	// Log messages to track request
 	klog.V(2).Infof("Machine creation request has been received for %q", req.Machine.Name)
 
 	var (
-		userData     []byte
+		userData     string
 		machine      = req.Machine
 		secret       = req.Secret
 		machineClass = req.MachineClass
@@ -111,29 +117,40 @@ func (p *Provider) CreateMachine(ctx context.Context, req *driver.CreateMachineR
 		return nil, status.Error(codes.InvalidArgument, strings.Join(msgs, "; "))
 	}
 
-	svc := p.createSVC(req.Secret)
-	if svc == nil {
-		return nil, status.Error(codes.Internal, "nil Equinix Metal service returned")
+	billingCycle, err := metalv1.NewDeviceCreateInputBillingCycleFromValue(providerSpec.BillingCycle)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	svc, err := p.createSVC(req.Secret)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	// we already validated the existence and non-nil-ness of userData in the validation
-	userData = secret.Data["userData"]
+	userData = string(secret.Data["userData"])
 
 	// packet tags are strings only
-	createRequest := &packngo.DeviceCreateRequest{
-		Hostname:       machine.Name,
-		UserData:       string(userData),
-		Plan:           providerSpec.MachineType,
-		ProjectID:      providerSpec.ProjectID,
-		BillingCycle:   providerSpec.BillingCycle,
-		Metro:          providerSpec.Metro,
-		Facility:       providerSpec.Facilities,
-		OS:             providerSpec.OS,
-		IPXEScriptURL:  providerSpec.IPXEScriptURL,
-		ProjectSSHKeys: providerSpec.SSHKeys,
-		Tags:           providerSpec.Tags,
+	createRequest := metalv1.CreateDeviceRequest{
+		DeviceCreateInMetroInput: &metalv1.DeviceCreateInMetroInput{
+			Metro:           providerSpec.Metro,
+			Hostname:        &machine.Name,
+			Userdata:        &userData,
+			Plan:            providerSpec.MachineType,
+			BillingCycle:    billingCycle,
+			OperatingSystem: providerSpec.OS,
+			IpxeScriptUrl:   providerSpec.IPXEScriptURL,
+			ProjectSshKeys:  providerSpec.SSHKeys,
+			Tags:            providerSpec.Tags,
+		},
 	}
 	klog.V(3).Infof("will create machine with request %#v, reservation IDs %v, reservedOnly %v", createRequest, providerSpec.ReservationIDs, providerSpec.ReservedOnly)
-	device, err := createDeviceWithReservations(svc, createRequest, providerSpec.ReservationIDs, providerSpec.ReservedOnly)
+	device, err := createDeviceWithReservations(
+		ctx,
+		svc,
+		providerSpec.ProjectID,
+		createRequest,
+		providerSpec.ReservationIDs,
+		providerSpec.ReservedOnly)
 	if err != nil {
 		klog.Errorf("Could not create machine: %v", err)
 		return nil, status.Error(codes.Unavailable, fmt.Sprintf("Could not create machine: %v", err))
@@ -157,15 +174,17 @@ func (p *Provider) CreateMachine(ctx context.Context, req *driver.CreateMachineR
 //
 // RESPONSE PARAMETERS (driver.DeleteMachineResponse)
 // LastKnownState        bytes(blob)              (Optional) Last known state of VM during the current operation.
-//                                                Could be helpful to continue operations in future requests.
 //
+//	Could be helpful to continue operations in future requests.
 func (p *Provider) DeleteMachine(ctx context.Context, req *driver.DeleteMachineRequest) (*driver.DeleteMachineResponse, error) {
 	// Log messages to track delete request
 	klog.V(2).Infof("Machine deletion request has been received for %q", req.Machine.Name)
 
 	// Check if incoming CR is a CR we support
 	if req.MachineClass.Provider != ProviderEquinixMetal {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderEquinixMetal))
+		return nil, status.Error(
+			codes.InvalidArgument,
+			fmt.Sprintf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderEquinixMetal))
 	}
 
 	// decodes the provider spec, and validates the spec and the secret for required fields.
@@ -174,11 +193,11 @@ func (p *Provider) DeleteMachine(ctx context.Context, req *driver.DeleteMachineR
 	}
 
 	instanceID := decodeMachineID(req.Machine.Spec.ProviderID)
-	svc := p.createSVC(req.Secret)
-	if svc == nil {
-		return nil, status.Error(codes.Internal, "nil Equinix Metal service returned")
+	svc, err := p.createSVC(req.Secret)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-	resp, err := svc.Delete(instanceID, true)
+	resp, err := svc.DeleteDevice(ctx, instanceID)
 	if err != nil {
 		if resp.StatusCode == 404 {
 			// if it is not found, do not error, just return
@@ -202,10 +221,13 @@ func (p *Provider) DeleteMachine(ctx context.Context, req *driver.DeleteMachineR
 //
 // RESPONSE PARAMETERS (driver.GetMachineStatueResponse)
 // ProviderID            string                   Unique identification of the VM at the cloud provider. This could be the same/different from req.MachineName.
-//                                                ProviderID typically matches with the node.Spec.ProviderID on the node object.
-//                                                Eg: gce://project-name/region/vm-ProviderID
+//
+//	ProviderID typically matches with the node.Spec.ProviderID on the node object.
+//	Eg: gce://project-name/region/vm-ProviderID
+//
 // NodeName             string                    Returns the name of the node-object that the VM register's with Kubernetes.
-//                                                This could be different from req.MachineName as well
+//
+//	This could be different from req.MachineName as well
 //
 // The request should return a NOT_FOUND (5) status error code if the machine is not existing
 func (p *Provider) GetMachineStatus(ctx context.Context, req *driver.GetMachineStatusRequest) (*driver.GetMachineStatusResponse, error) {
@@ -219,18 +241,20 @@ func (p *Provider) GetMachineStatus(ctx context.Context, req *driver.GetMachineS
 
 	// Check if incoming CR is a CR we support
 	if req.MachineClass.Provider != ProviderEquinixMetal {
-		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderEquinixMetal))
+		return nil, status.Error(
+			codes.InvalidArgument,
+			fmt.Sprintf("Requested for Provider '%s', we only support '%s'", req.MachineClass.Provider, ProviderEquinixMetal))
 	}
 
 	if err := validateSecretAPIKey(req.Secret); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	svc := p.createSVC(req.Secret)
-	if svc == nil {
-		return nil, status.Error(codes.Internal, "nil Equinix Metal service returned")
+	svc, err := p.createSVC(req.Secret)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-	device, _, err := svc.Get(id, &packngo.GetOptions{})
+	device, _, err := svc.FindDeviceByID(ctx, id)
 	if err != nil {
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("Could not get device %s: %v", id, err))
 	}
@@ -253,8 +277,8 @@ func (p *Provider) GetMachineStatus(ctx context.Context, req *driver.GetMachineS
 //
 // RESPONSE PARAMETERS (driver.ListMachinesResponse)
 // MachineList           map<string,string>  A map containing the keys as the MachineID and value as the MachineName
-//                                           for all machine's who where possibilly created by this ProviderSpec
 //
+//	for all machine's who where possibilly created by this ProviderSpec
 func (p *Provider) ListMachines(ctx context.Context, req *driver.ListMachinesRequest) (*driver.ListMachinesResponse, error) {
 	// Log messages to track start and end of request
 	klog.V(2).Infof("List machines request has been received for %q", req.MachineClass.Name)
@@ -291,17 +315,17 @@ func (p *Provider) ListMachines(ctx context.Context, req *driver.ListMachinesReq
 		return resp, nil
 	}
 
-	svc := p.createSVC(req.Secret)
-	if svc == nil {
-		return nil, status.Error(codes.Internal, "nil Equinix Metal service returned")
+	svc, err := p.createSVC(req.Secret)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-	devices, _, err := svc.List(providerSpec.ProjectID, &packngo.ListOptions{})
+	deviceList, _, err := svc.FindProjectDevices(ctx, providerSpec.ProjectID)
 	if err != nil {
 		msg := fmt.Sprintf("Could not list devices for project %s: %v", providerSpec.ProjectID, err)
 		klog.Error(msg)
 		return nil, status.Error(codes.Unknown, msg)
 	}
-	for _, d := range devices {
+	for _, d := range deviceList.Devices {
 		matchedCluster := false
 		matchedRole := false
 		for _, tag := range d.Tags {
@@ -313,7 +337,7 @@ func (p *Provider) ListMachines(ctx context.Context, req *driver.ListMachinesReq
 			}
 		}
 		if matchedCluster && matchedRole {
-			resp.MachineList[encodeMachineID(&d)] = d.Hostname
+			resp.MachineList[encodeMachineID(&d)] = *d.Hostname
 		}
 	}
 	return resp, nil
@@ -326,7 +350,6 @@ func (p *Provider) ListMachines(ctx context.Context, req *driver.ListMachinesReq
 //
 // RESPONSE PARAMETERS (driver.GetVolumeIDsResponse)
 // VolumeIDs             []string                             VolumeIDs is a repeated list of VolumeIDs.
-//
 func (p *Provider) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsRequest) (*driver.GetVolumeIDsResponse, error) {
 	// Log messages to track start and end of request
 	klog.V(2).Infof("GetVolumeIDs request has been received for %q", req.PVSpecs)
@@ -335,8 +358,8 @@ func (p *Provider) GetVolumeIDs(ctx context.Context, req *driver.GetVolumeIDsReq
 	return &driver.GetVolumeIDsResponse{}, status.Error(codes.Unimplemented, "Equinix Metal does not have storage")
 }
 
-//  create a session
-func (p *Provider) createSVC(secret *corev1.Secret) packngo.DeviceService {
+// create a session
+func (p *Provider) createSVC(secret *corev1.Secret) (spi.MetalDeviceService, error) {
 	return p.SPI.NewSession(secret)
 }
 
@@ -364,33 +387,40 @@ func decodeProviderSpec(machineClass *v1alpha1.MachineClass) (*api.EquinixMetalP
 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if providerSpec.IPXEScriptURL != "" {
+	if providerSpec.IPXEScriptURL != nil {
 		providerSpec.OS = "custom_ipxe"
 	}
 
 	return providerSpec, nil
 }
 
-func createDeviceWithReservations(svc packngo.DeviceService, createRequest *packngo.DeviceCreateRequest, reservationIDs []string, reservedOnly bool) (device *packngo.Device, err error) {
+func createDeviceWithReservations(
+	ctx context.Context,
+	svc spi.MetalDeviceService,
+	projectID string,
+	createRequest metalv1.CreateDeviceRequest,
+	reservationIDs []string,
+	reservedOnly bool,
+) (device *metalv1.Device, err error) {
 	// if there were no reservation IDs and I didn't ask for reservedOnly, then just create one on-demand and return
 	if len(reservationIDs) == 0 && !reservedOnly {
 		klog.V(2).Info("No reservation ids provided, creating a on demand instance")
-		device, _, err = svc.Create(createRequest)
+		device, _, err = svc.CreateDevice(ctx, projectID, createRequest)
 		return device, err
 	}
 
 	// if we got here, we either had some reservation IDs, or we were asked to do reserved only.
 	// In both cases, we try reservations first.
 	for _, resID := range reservationIDs {
-		createRequest.HardwareReservationID = resID
-		var res *packngo.Response
-		device, res, err = svc.Create(createRequest)
+		createRequest.DeviceCreateInMetroInput.HardwareReservationId = &resID
+		var res *http.Response
+		device, res, err = svc.CreateDevice(ctx, projectID, createRequest)
 		// if no error, we got the device, return it
 		if err == nil {
 			return device, err
 		}
 		body := bytes.NewBuffer([]byte{})
-		if _, err := ioutil.ReadAll(res.Request.Body); err != nil {
+		if _, err := io.ReadAll(res.Request.Body); err != nil {
 			klog.Error(err)
 		}
 		klog.Errorf("Error while creating machine with reservation id %s: Request: %s Error: %v", resID, body.String(), err)
@@ -400,7 +430,7 @@ func createDeviceWithReservations(svc packngo.DeviceService, createRequest *pack
 		return nil, errors.New("could not get a device with the provided reservation IDs, and reservedOnly is true")
 	}
 	// now just create a device on demand
-	device, _, err = svc.Create(createRequest)
+	device, _, err = svc.CreateDevice(ctx, projectID, createRequest)
 	return device, err
 }
 
@@ -418,8 +448,8 @@ func validateSecret(secret *corev1.Secret, fields ...string) error {
 	return nil
 }
 
-func encodeMachineID(device *packngo.Device) string {
-	return fmt.Sprintf("equinixmetal://%s/%s", device.Facility.Code, device.ID)
+func encodeMachineID(device *metalv1.Device) string {
+	return fmt.Sprintf("equinixmetal://%s/%s", *device.Metro.Code, *device.Id)
 }
 
 func decodeMachineID(id string) string {
