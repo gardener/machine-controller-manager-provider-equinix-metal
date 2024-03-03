@@ -1,39 +1,40 @@
 package mock
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/equinix/equinix-sdk-go/services/metalv1"
 	"github.com/gardener/machine-controller-manager-provider-equinix-metal/pkg/spi"
-	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/codes"
-	"github.com/gardener/machine-controller-manager/pkg/util/provider/machinecodes/status"
-	"github.com/packethost/packngo"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // PluginSPIImpl is the plugin SPI implementation to mock the provider
 type PluginSPIImpl struct {
-	Devices []packngo.Device
+	Devices []metalv1.Device
 	index   int
 	mu      sync.Mutex // so that we can increment index without conflicts
 }
 
 // NewSession creates a mock session for provider
-func (p *PluginSPIImpl) NewSession(secret *corev1.Secret) packngo.DeviceService {
+func (p *PluginSPIImpl) NewSession(secret *corev1.Secret) (spi.MetalDeviceService, error) {
 	apiKey := spi.GetAPIKey(secret)
 	token := strings.TrimSpace(apiKey)
 
-	if token != "" {
-		return &deviceService{
-			spi:   p,
-			name:  "gardener",
-			token: token,
-		}
+	if token == "" {
+		return nil, errors.New("Equinix Metal api token required")
 	}
-	return nil
+
+	return &deviceService{
+		spi:   p,
+		name:  "gardener",
+		token: token,
+	}, nil
 }
 
 func (p *PluginSPIImpl) increment() {
@@ -42,7 +43,7 @@ func (p *PluginSPIImpl) increment() {
 	p.index++
 }
 
-func (p *PluginSPIImpl) addDevice(dev packngo.Device) {
+func (p *PluginSPIImpl) addDevice(dev metalv1.Device) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.Devices = append(p.Devices, dev)
@@ -54,86 +55,76 @@ type deviceService struct {
 	token string
 }
 
-func (d *deviceService) List(projectID string, opts *packngo.ListOptions) ([]packngo.Device, *packngo.Response, error) {
-	return d.spi.Devices, &packngo.Response{}, nil
+func (d *deviceService) FindProjectDevices(
+	ctx context.Context,
+	projectID string,
+) (*metalv1.DeviceList, *http.Response, error) {
+	return &metalv1.DeviceList{
+		Devices: d.spi.Devices,
+	}, &http.Response{}, nil
 }
-func (d *deviceService) Get(deviceID string, opts *packngo.GetOptions) (*packngo.Device, *packngo.Response, error) {
+
+func (d *deviceService) FindDeviceByID(
+	ctx context.Context,
+	deviceID string,
+) (*metalv1.Device, *http.Response, error) {
 	for _, dev := range d.spi.Devices {
-		if dev.ID == deviceID {
-			return &dev, &packngo.Response{}, nil
+		if *dev.Id == deviceID {
+			return &dev, &http.Response{}, nil
 		}
 	}
-	return nil, &packngo.Response{
-		Response: &http.Response{
-			StatusCode: 404,
-			Status:     "404 NOT FOUND",
-		},
+	return nil, &http.Response{
+		StatusCode: 404,
+		Status:     "404 NOT FOUND",
 	}, fmt.Errorf("404 NOT FOUND")
 }
-func (d *deviceService) Create(req *packngo.DeviceCreateRequest) (*packngo.Device, *packngo.Response, error) {
+
+func (d *deviceService) CreateDevice(
+	ctx context.Context,
+	projectID string,
+	createDeviceRequest metalv1.CreateDeviceRequest,
+) (*metalv1.Device, *http.Response, error) {
 	now := time.Now()
 	d.spi.increment()
-	dev := packngo.Device{
-		ID:           fmt.Sprintf("%06d", d.spi.index),
+	req := createDeviceRequest.DeviceCreateInMetroInput
+	var (
+		name         = fmt.Sprintf("%06d", d.spi.index)
+		billingCycle = string(*req.BillingCycle)
+	)
+	dev := metalv1.Device{
+		Id:           &name,
 		Hostname:     req.Hostname,
-		Description:  &req.Description,
-		Created:      now.String(),
-		Updated:      now.String(),
-		BillingCycle: req.BillingCycle,
+		Description:  req.Description,
+		CreatedAt:    &now,
+		UpdatedAt:    &now,
+		BillingCycle: &billingCycle,
 		Tags:         req.Tags,
-		OS: &packngo.OS{
-			Name: req.OS,
+		OperatingSystem: &metalv1.OperatingSystem{
+			Name: &req.OperatingSystem,
 		},
-		Plan: &packngo.Plan{},
-		Facility: &packngo.Facility{
-			Code: req.Facility[0],
+		Plan: &metalv1.Plan{},
+		Metro: &metalv1.DeviceMetro{
+			Code: &req.Metro,
 		},
-		Project: &packngo.Project{
-			ID: req.ProjectID,
+		Project: &metalv1.Project{
+			Id: &projectID,
 		},
-		UserData: req.UserData,
+		Userdata: req.Userdata,
 	}
 	d.spi.addDevice(dev)
-	return &dev, &packngo.Response{}, nil
+	return &dev, &http.Response{}, nil
 }
-func (d *deviceService) Delete(deviceID string, force bool) (*packngo.Response, error) {
-	var devs []packngo.Device
+
+func (d *deviceService) DeleteDevice(
+	ctx context.Context,
+	deviceID string,
+) (*http.Response, error) {
+	var devs []metalv1.Device
 	for _, dev := range d.spi.Devices {
-		if dev.ID != deviceID {
+		if *dev.Id != deviceID {
 			devs = append(devs, dev)
 		}
 	}
 	d.spi.Devices = devs
-	return &packngo.Response{}, nil
-}
-
-/*
- Below are not implemenetd as unnecessary for MCM
-*/
-func (d *deviceService) Update(string, *packngo.DeviceUpdateRequest) (*packngo.Device, *packngo.Response, error) {
-	return nil, nil, status.Error(codes.Unimplemented, "Update unsupported in mock")
-}
-func (d *deviceService) Reboot(string) (*packngo.Response, error) {
-	return nil, status.Error(codes.Unimplemented, "Reboot unsupported in mock")
-}
-func (d *deviceService) PowerOff(string) (*packngo.Response, error) {
-	return nil, status.Error(codes.Unimplemented, "PowerOff unsupported in mock")
-}
-func (d *deviceService) PowerOn(string) (*packngo.Response, error) {
-	return nil, status.Error(codes.Unimplemented, "PowerOn unsupported in mock")
-}
-func (d *deviceService) Lock(string) (*packngo.Response, error) {
-	return nil, status.Error(codes.Unimplemented, "Lock unsupported in mock")
-}
-func (d *deviceService) Unlock(string) (*packngo.Response, error) {
-	return nil, status.Error(codes.Unimplemented, "Unlock unsupported in mock")
-}
-func (d *deviceService) ListBGPSessions(deviceID string, opts *packngo.ListOptions) ([]packngo.BGPSession, *packngo.Response, error) {
-	return nil, nil, status.Error(codes.Unimplemented, "ListBGPSessions unsupported in mock")
-}
-func (d *deviceService) ListBGPNeighbors(deviceID string, opts *packngo.ListOptions) ([]packngo.BGPNeighbor, *packngo.Response, error) {
-	return nil, nil, status.Error(codes.Unimplemented, "ListBGPNeighbors unsupported in mock")
-}
-func (d *deviceService) ListEvents(deviceID string, opts *packngo.ListOptions) ([]packngo.Event, *packngo.Response, error) {
-	return nil, nil, status.Error(codes.Unimplemented, "ListEvents unsupported in mock")
+	return &http.Response{}, nil
 }

@@ -1,10 +1,13 @@
 package spi
 
 import (
+	"context"
+	"errors"
+	"net/http"
 	"strings"
 
+	"github.com/equinix/equinix-sdk-go/services/metalv1"
 	api "github.com/gardener/machine-controller-manager-provider-equinix-metal/pkg/provider/apis"
-	"github.com/packethost/packngo"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -13,18 +16,20 @@ type PluginSPIImpl struct {
 }
 
 // NewSession creates a session for equinix metal provider
-func (p *PluginSPIImpl) NewSession(secret *corev1.Secret) packngo.DeviceService {
+func (p *PluginSPIImpl) NewSession(secret *corev1.Secret) (MetalDeviceService, error) {
 	apiKey := GetAPIKey(secret)
 	token := strings.TrimSpace(apiKey)
 
-	if token != "" {
-		client := packngo.NewClientWithAuth("gardener", token, nil)
-		if client == nil {
-			return nil
-		}
-		return client.Devices
+	if token == "" {
+		return nil, errors.New("Equinix Metal api token required")
 	}
-	return nil
+
+	configuration := metalv1.NewConfiguration()
+	configuration.Debug = true
+	configuration.AddDefaultHeader("X-Auth-Token", token)
+	client := metalv1.NewAPIClient(configuration)
+
+	return &metalDeviceSvc{client: client}, nil
 }
 
 // GetAPIKey extracts the APIKey from the *corev1.Secret object
@@ -41,4 +46,39 @@ func extractCredentialsFromData(data map[string][]byte, keys ...string) string {
 		}
 	}
 	return ""
+}
+
+type metalDeviceSvc struct {
+	client *metalv1.APIClient
+}
+
+func (a *metalDeviceSvc) FindProjectDevices(
+	ctx context.Context,
+	projectID string,
+) (*metalv1.DeviceList, *http.Response, error) {
+	return a.client.DevicesApi.FindProjectDevices(ctx, projectID).Execute()
+}
+
+func (a *metalDeviceSvc) FindDeviceByID(
+	ctx context.Context,
+	deviceID string,
+) (*metalv1.Device, *http.Response, error) {
+	return a.client.DevicesApi.FindDeviceById(ctx, deviceID).Execute()
+}
+
+func (a *metalDeviceSvc) CreateDevice(
+	ctx context.Context,
+	projectID string,
+	createDeviceRequest metalv1.CreateDeviceRequest,
+) (*metalv1.Device, *http.Response, error) {
+	return a.client.DevicesApi.
+		CreateDevice(ctx, projectID).
+		CreateDeviceRequest(createDeviceRequest).Execute()
+}
+
+func (a *metalDeviceSvc) DeleteDevice(
+	ctx context.Context,
+	deviceID string,
+) (*http.Response, error) {
+	return a.client.DevicesApi.DeleteDevice(ctx, deviceID).Execute()
 }

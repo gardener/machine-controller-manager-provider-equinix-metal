@@ -26,7 +26,6 @@ const (
 var _ = Describe("MachineServer", func() {
 	// Some initializations
 	providerSpecStruct := api.EquinixMetalProviderSpec{
-		Facilities:   []string{"ewr1", "ny5"},
 		Metro:        "ny",
 		MachineType:  "c3.small.x86",
 		BillingCycle: "hourly",
@@ -86,7 +85,7 @@ var _ = Describe("MachineServer", func() {
 				},
 				expect: expect{
 					machineResponse: &driver.CreateMachineResponse{
-						ProviderID: "equinixmetal://ewr1/000001",
+						ProviderID: "equinixmetal://ny/000001",
 						NodeName:   "machine-0",
 					},
 					errToHaveOccurred: false,

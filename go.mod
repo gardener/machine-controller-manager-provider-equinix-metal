@@ -3,10 +3,10 @@ module github.com/gardener/machine-controller-manager-provider-equinix-metal
 go 1.20
 
 require (
+	github.com/equinix/equinix-sdk-go v0.33.0
 	github.com/gardener/machine-controller-manager v0.49.1
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.23.0
-	github.com/packethost/packngo v0.9.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
 	k8s.io/api v0.26.2
