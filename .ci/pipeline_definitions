@@ -15,8 +15,10 @@ machine-controller-manager-provider-equinix-metal:
                 source: ~ # default
               steps:
                 build: ~
-            registry: 'gcr-readwrite'
-            image: 'eu.gcr.io/gardener-project/gardener/machine-controller-manager-provider-equinix-metal'
+            registry: 'gcp-opensource'
+            image: 'europe-docker.pkg.dev/gardener-project/snapshots/gardener/machine-controller-manager-provider-equinix-metal'
+      component_descriptor:
+        ocm_repository: europe-docker.pkg.dev/gardener-project/snapshots
     steps:
       check:
         image: 'golang:1.20.4'
@@ -28,7 +30,6 @@ machine-controller-manager-provider-equinix-metal:
   jobs:
     head-update:
       traits:
-        component_descriptor: ~
         draft_release: ~
         options:
           public_build_logs: true
@@ -49,4 +50,15 @@ machine-controller-manager-provider-equinix-metal:
             internal_scp_workspace:
               channel_name: 'C0170QTBJUW' # gardener-mcm
               slack_cfg_name: 'scp_workspace'
-        component_descriptor: ~
+        component_descriptor:
+          ocm_repository: europe-docker.pkg.dev/gardener-project/releases
+        publish:
+          dockerimages:
+            machine-controller-manager-provider-equinix-metal:
+              inputs:
+                repos:
+                  source: ~ # default
+                steps:
+                  build: ~
+              registry: 'gcp-opensource'
+              image: 'europe-docker.pkg.dev/gardener-project/releases/gardener/machine-controller-manager-provider-equinix-metal'
