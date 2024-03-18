@@ -1,4 +1,7 @@
 # machine-controller-manager-provider-equinix-metal
+
+[![REUSE status](https://api.reuse.software/badge/github.com/gardener/machine-controller-manager-provider-equinix-metal)](https://api.reuse.software/info/github.com/gardener/machine-controller-manager-provider-equinix-metal)
+
 Out of tree (controller based) implementation for `equinix-metal` as a new provider.
 
 ## About
