@@ -1,8 +1,6 @@
 module github.com/gardener/machine-controller-manager-provider-equinix-metal
 
-go 1.22.0
-
-toolchain go1.24.2
+go 1.23
 
 require (
 	github.com/equinix/equinix-sdk-go v0.33.0
