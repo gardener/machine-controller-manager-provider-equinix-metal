@@ -6,8 +6,6 @@
 
 set -e
 
-source "$(dirname ${0})/setupenv.src"
-
 # Install Ginkgo (test framework) to be able to execute the tests.
 go install github.com/onsi/ginkgo/ginkgo
 

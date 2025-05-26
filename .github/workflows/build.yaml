@@ -1,0 +1,51 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        required: true
+        type: string
+        default: snapshot
+        description: |
+          the mode to use. either `snapshot` or `release`. Will affect effective version, as well
+          as target-oci-registry.
+
+jobs:
+  prepare:
+    uses: gardener/cc-utils/.github/workflows/prepare.yaml@master
+    with:
+      mode: ${{ inputs.mode }}
+
+  oci-images:
+    name: Build OCI-Images
+    needs:
+      - prepare
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: gardener/cc-utils/.github/workflows/oci-ocm.yaml@master
+    with:
+      name: machine-controller-manager-provider-equinix-metal
+      version: ${{ needs.prepare.outputs.version }}
+      oci-registry: ${{ needs.prepare.outputs.oci-registry }}
+      oci-repository: gardener/machine-controller-manager-provider-equinix-metal
+      oci-platforms: linux/amd64
+
+  run-build-scripts:
+    runs-on: ubuntu-latest
+    name: Build-Scripts
+    strategy:
+      matrix:
+        script:
+          # - .ci/check
+          - .ci/build
+          - .ci/test
+    steps:
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.20.4'
+      - uses: actions/checkout@v4
+      - run: |
+          ${{ matrix.script }}
