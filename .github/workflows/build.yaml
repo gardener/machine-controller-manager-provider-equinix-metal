@@ -39,7 +39,8 @@ jobs:
     strategy:
       matrix:
         script:
-          # - .ci/check
+          # - .ci/check - broken, probably due to golang-version-upgrade which needs to be
+          #               reflected in source-tree (commented-out to unblock pipeline)
           - .ci/build
           - .ci/test
     steps:
