@@ -1,0 +1,27 @@
+# See the OWNERS docs at https://go.k8s.io/owners
+
+aliases:
+  machine-controller-manager-provider-equinix-metal-reviewers:
+  - aaronfern
+  - ashwani2k
+  - elankath
+  - gagan16k
+  - jonas-zipprick
+  - kon-angelo
+  - rfranzke
+  - schrodit
+  - takoverflow
+  - thiyyakat
+  - unmarshall
+  machine-controller-manager-provider-equinix-metal-approvers:
+  - aaronfern
+  - ashwani2k
+  - elankath
+  - gagan16k
+  - jonas-zipprick
+  - kon-angelo
+  - rfranzke
+  - schrodit
+  - takoverflow
+  - thiyyakat
+  - unmarshall
