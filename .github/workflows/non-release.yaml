@@ -6,6 +6,10 @@ on:
 jobs:
   build:
     uses: ./.github/workflows/build.yaml
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     with:
       mode: snapshot
 
