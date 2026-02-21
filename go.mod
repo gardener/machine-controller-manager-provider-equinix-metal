@@ -1,6 +1,6 @@
 module github.com/gardener/machine-controller-manager-provider-equinix-metal
 
-go 1.20
+go 1.23.0
 
 require (
 	github.com/equinix/equinix-sdk-go v0.33.0
@@ -52,13 +52,12 @@ require (
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/spf13/cobra v1.6.1 // indirect
 	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/term v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.6.0 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
